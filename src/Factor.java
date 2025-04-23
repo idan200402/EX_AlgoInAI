@@ -51,15 +51,34 @@ public class Factor {
         if(parents.isEmpty()){
             sb.append("variable has no parents");
         }else{
-            sb.append(", parents=");
-            for (Variable parent : parents) {
-                sb.append(parent.getName()).append(" ");
+            sb.append(", parents={");
+            for(int i = 0; i < parents.size(); i++){
+                sb.append(parents.get(i).getName());
+                if(i < parents.size() - 1){
+                    sb.append(",");
+                }
             }
+            sb.append("}");
         }
-        sb.append(", probabilities=").append(probabilities);
+        sb.append(" , probabilities=").append(probabilities);
         sb.append("}\n");
 
         return sb.toString();
+    }
+    public double getProbability(Map<String, String> assignment) {
+        String assignmentString = assignment.get(variable.getName());
+        int outcomeIndex = variable.getOutcomes().indexOf(assignmentString);
+        int index = 0;
+        int multiplier = this.variable.getOutcomesCount();
+        for(int i = 0; i < parents.size(); i++){
+            Variable parent = parents.get(i);
+            String parentAssignmentString = assignment.get(parent.getName());
+            int parentOutcomeIndex = parent.getOutcomes().indexOf(parentAssignmentString);
+            index += parentOutcomeIndex * multiplier;
+            multiplier *= parent.getOutcomesCount();
+        }
+        index += outcomeIndex;
+        return probabilities.get(index);
     }
 
 
