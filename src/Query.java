@@ -1,3 +1,4 @@
+import java.util.HashMap;
 import java.util.Map;
 
 public class Query {
@@ -28,12 +29,11 @@ public class Query {
     }
     @Override
     public String toString() {
-        Map<Integer, String> algorithmTypeMap = Map.of(
-                0, "Lookup",
-                1, "Simple inference",
-                2, "Variable elimination",
-                3, "Something else"
-        );
+        Map<Integer, String> algorithmTypeMap = new HashMap<>();
+                algorithmTypeMap.put(0, "Lookup");
+                algorithmTypeMap.put(1, "Simple inference");
+                algorithmTypeMap.put(2, "Variable elimination");
+                algorithmTypeMap.put(3, "Something else");
         if(isJointQuery){
             return "P(" + assaignmentToString(query) + ") , " + algorithmTypeMap.get(algorithmType) + "\n";
         }

@@ -19,6 +19,8 @@ public class Lookup extends BayesianAlgorithm {
             }
             probability *= factor.getProbability(relevantAssignments);
         }
+        this.additionCount = 0;
+        this.multiplicationCount += factors.size() - 1;
         return probability;
     }
 }

@@ -1,9 +1,11 @@
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 //this class represents a factor in bayesian network. The initial factors after the parse are the CPTs.
 public class Factor {
+    //it has the variable name the probabilities and the parents of the variable , they are appearing as Given in the xml file.
     private final Variable variable;
     private List<Double> probabilities;
     private List<Variable> parents;
@@ -31,6 +33,7 @@ public class Factor {
     public void setProbabilities(List<Double> probabilities) {
         this.probabilities = probabilities;
     }
+    //since not all the factors have parents we need to check if the list is null or not and then initialize it and add the parent.
 
     public void addParent(Variable parent) {
         if (parents == null) {
@@ -38,11 +41,7 @@ public class Factor {
         }
         parents.add(parent);
     }
-
-    public int calcIndex(Map<Variable, Integer> assignment) {
-        return 0;
-    }
-
+    //for debugging purposes.
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -65,21 +64,24 @@ public class Factor {
 
         return sb.toString();
     }
-    public double getProbability(Map<String, String> assignment) {
-        String assignmentString = assignment.get(variable.getName());
-        int outcomeIndex = variable.getOutcomes().indexOf(assignmentString);
-        int index = 0;
-        int multiplier = this.variable.getOutcomesCount();
-        for(int i = 0; i < parents.size(); i++){
-            Variable parent = parents.get(i);
-            String parentAssignmentString = assignment.get(parent.getName());
-            int parentOutcomeIndex = parent.getOutcomes().indexOf(parentAssignmentString);
-            index += parentOutcomeIndex * multiplier;
-            multiplier *= parent.getOutcomesCount();
-        }
-        index += outcomeIndex;
-        return probabilities.get(index);
+//integral
+public double getProbability(Map<String, String> assignment) {
+    int index = 0;
+    int multiplier = 1;
+    List<Variable> parentsReverse = new ArrayList<>(parents);
+    Collections.reverse(parentsReverse);
+    for (Variable parent : parentsReverse) {
+        String parentAssignment = assignment.get(parent.getName());
+        int outcomeIndex = parent.getOutcomes().indexOf(parentAssignment);
+        index += outcomeIndex * multiplier;
+        multiplier *= parent.getOutcomesCount();
     }
+    String varAssignment = assignment.get(variable.getName());
+    int varOutcomeIndex = variable.getOutcomes().indexOf(varAssignment);
+    index = index * variable.getOutcomesCount() + varOutcomeIndex;
+
+    return probabilities.get(index);
+}
 
 
 }
