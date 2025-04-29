@@ -5,13 +5,13 @@ import java.util.*;
  */
 public class SimpleInference extends BayesianAlgorithm {
     @Override
-    public double calculateProbability(Query query, List<Factor> factors) {
+    public double calculateProbability(Query query, List<CPT> CPTS) {
         Set<String> allVariables = new HashSet<>();
         Map<String, List<String>> variableAndOutcomePairs = new HashMap<>();
-        for (Factor factor : factors) {
-            String variableName = factor.getVariable().getName();
+        for (CPT CPT : CPTS) {
+            String variableName = CPT.getVariable().getName();
             allVariables.add(variableName);
-            variableAndOutcomePairs.put(variableName, factor.getVariable().getOutcomes());
+            variableAndOutcomePairs.put(variableName, CPT.getVariable().getOutcomes());
         }
         Map<String, String> queryVariables = query.getQuery();
         Map<String, String> evidenceVariables = query.getEvidence();
@@ -19,24 +19,24 @@ public class SimpleInference extends BayesianAlgorithm {
         hiddenVariables.removeAll(queryVariables.keySet());
         hiddenVariables.removeAll(evidenceVariables.keySet());
         List<String> hiddenVariableList = new ArrayList<>(hiddenVariables);
-        double nominator = calculateMarginalProbability(queryVariables, evidenceVariables, hiddenVariableList, variableAndOutcomePairs, factors);
+        double nominator = calculateMarginalProbability(queryVariables, evidenceVariables, hiddenVariableList, variableAndOutcomePairs, CPTS);
         List<String> queryVariableList = new ArrayList<>(queryVariables.keySet());
-        double denominator = calculateDenominator(nominator, queryVariableList, queryVariables, hiddenVariableList, variableAndOutcomePairs, evidenceVariables, factors);
+        double denominator = calculateDenominator(nominator, queryVariableList, queryVariables, hiddenVariableList, variableAndOutcomePairs, evidenceVariables, CPTS);
         return nominator / denominator;
 
 
     }
 
-    private double calculateMarginalProbability(Map<String, String> queryVariables, Map<String, String> evidenceVariables, List<String> hiddenVarToSum, Map<String, List<String>> variableAndOutcomePairs, List<Factor> factors) {
+    private double calculateMarginalProbability(Map<String, String> queryVariables, Map<String, String> evidenceVariables, List<String> hiddenVarToSum, Map<String, List<String>> variableAndOutcomePairs, List<CPT> CPTS) {
         Map<String, String> currentAssignment = new HashMap<>();
         currentAssignment.putAll(queryVariables);
         currentAssignment.putAll(evidenceVariables);
-        return sumPossibilities(hiddenVarToSum, 0, currentAssignment, variableAndOutcomePairs, factors);
+        return sumPossibilities(hiddenVarToSum, 0, currentAssignment, variableAndOutcomePairs, CPTS);
     }
 
-    private double sumPossibilities(List<String> hiddenVarToSum, int index, Map<String, String> currentAssignment, Map<String, List<String>> variableAndOutcomePairs, List<Factor> factors) {
+    private double sumPossibilities(List<String> hiddenVarToSum, int index, Map<String, String> currentAssignment, Map<String, List<String>> variableAndOutcomePairs, List<CPT> CPTS) {
         if (index == hiddenVarToSum.size()) {
-            return calculateJointProbability(currentAssignment, factors);
+            return calculateJointProbability(currentAssignment, CPTS);
         }
 
         String currVariable = hiddenVarToSum.get(index);
@@ -45,7 +45,7 @@ public class SimpleInference extends BayesianAlgorithm {
         boolean firstOutcome = true;
         for (String outcome : outcomes) {
             currentAssignment.put(currVariable, outcome);
-            double currentValue = sumPossibilities(hiddenVarToSum, index + 1, currentAssignment, variableAndOutcomePairs, factors);
+            double currentValue = sumPossibilities(hiddenVarToSum, index + 1, currentAssignment, variableAndOutcomePairs, CPTS);
             if (firstOutcome) {
                 sum = currentValue;
                 firstOutcome = false;
@@ -57,16 +57,16 @@ public class SimpleInference extends BayesianAlgorithm {
         currentAssignment.remove(currVariable);
         return sum;
     }
-    private double calculateJointProbability(Map<String, String> assignment, List<Factor> factors) {
+    private double calculateJointProbability(Map<String, String> assignment, List<CPT> CPTS) {
         Query query = new Query(assignment, new HashMap<>(), 0, true);
         BayesianAlgorithm lookup = AlgorithmFactory.createAlgorithm(0);
-        double jointProbability = lookup.calculateProbability(query, factors);
+        double jointProbability = lookup.calculateProbability(query, CPTS);
         multiplicationCount += lookup.getMultiplicationCount();
         return jointProbability;
     }
 
     private double calculateDenominator ( double nominator, List<
-    String > queryVariableList, Map < String, String > queryVariables, List < String > hiddenVariableList, Map < String, List < String >> variableAndOutcomePairs, Map < String, String > evidenceVariables, List < Factor > factors)
+    String > queryVariableList, Map < String, String > queryVariables, List < String > hiddenVariableList, Map < String, List < String >> variableAndOutcomePairs, Map < String, String > evidenceVariables, List <CPT> CPTS)
     {
         double res = nominator;
         if (queryVariableList.isEmpty()) {
@@ -75,7 +75,7 @@ public class SimpleInference extends BayesianAlgorithm {
         List<Map<String, String>> allQueryAssignments = generateAllAssignments(variableAndOutcomePairs, queryVariableList);
         allQueryAssignments.removeIf(assignment -> assignment.equals(queryVariables));
         for (Map<String, String> assignment : allQueryAssignments) {
-            double partialProbability = calculateMarginalProbability(assignment, evidenceVariables, hiddenVariableList, variableAndOutcomePairs, factors);
+            double partialProbability = calculateMarginalProbability(assignment, evidenceVariables, hiddenVariableList, variableAndOutcomePairs, CPTS);
             res += partialProbability;
             additionCount++;
         }
@@ -101,6 +101,13 @@ public class SimpleInference extends BayesianAlgorithm {
             helperGenerator(variableList, index + 1, currentAssignment, variableAndOutcomePairs, res);
         }
         currentAssignment.remove(currVariable);
+        String variableName = variableList.get(index);
+        List<String> outcomesForVariable = variableAndOutcomePairs.get(variableName);
+        if(outcomesForVariable == null){
+            System.out.println("Error: outcomes for variable " + variableName + "is null");
+        } else if(outcomesForVariable.isEmpty()) {
+            System.out.println("Error: outcomes for variable " + variableName + "is empty");
+        }
     }
 
 

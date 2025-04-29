@@ -1,3 +1,4 @@
+//a factory class to create different types of Bayesian algorithms by the type of algorithm.
 public class AlgorithmFactory {
 
     public static BayesianAlgorithm createAlgorithm(int type){

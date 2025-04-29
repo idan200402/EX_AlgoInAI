@@ -7,20 +7,20 @@ import java.util.Map;
  */
 public class Lookup extends BayesianAlgorithm {
     @Override
-    public double calculateProbability(Query query , List<Factor> factors) {
+    public double calculateProbability(Query query , List<CPT> CPTS) {
         Map<String,String> allAssignments = new HashMap<>(query.getQuery());
         allAssignments.putAll(query.getEvidence());
         double probability = 1.0;
-        for(Factor factor : factors) {
+        for(CPT CPT : CPTS) {
             Map<String,String> relevantAssignments = new HashMap<>();
-            relevantAssignments.put(factor.getVariable().getName() , allAssignments.get(factor.getVariable().getName()));
-            for(Variable parent : factor.getParents()) {
+            relevantAssignments.put(CPT.getVariable().getName() , allAssignments.get(CPT.getVariable().getName()));
+            for(Variable parent : CPT.getParents()) {
                 relevantAssignments.put(parent.getName() , allAssignments.get(parent.getName()));
             }
-            probability *= factor.getProbability(relevantAssignments);
+            probability *= CPT.getProbability(relevantAssignments);
         }
         this.additionCount = 0;
-        this.multiplicationCount += factors.size() - 1;
+        this.multiplicationCount += CPTS.size() - 1;
         return probability;
     }
 }

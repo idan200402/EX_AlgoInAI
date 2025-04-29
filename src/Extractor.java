@@ -14,14 +14,14 @@ import java.util.regex.Pattern;
 
 public class Extractor {
     private final Map<String, Variable> variablesLookup;
-    private final List<Factor> factors;
+    private final List<CPT> CPTS;
     private final List<Query> queries;
     private String netPath;
 
     //constructor
     public Extractor() {
         this.variablesLookup = new HashMap<>();
-        this.factors = new ArrayList<>();
+        this.CPTS = new ArrayList<>();
         this.queries = new ArrayList<>();
     }
     public void parseInput() {
@@ -136,20 +136,20 @@ public class Extractor {
             String variableName = extractText(cptElement, "FOR");
             Variable variable = variablesLookup.get(variableName);
             if (variable != null) {
-                Factor factor = new Factor(variable);
+                CPT CPT = new CPT(variable);
                 NodeList parentsList = cptElement.getElementsByTagName("GIVEN");
                 for (int j = 0; j < parentsList.getLength(); j++) {
                     Element parentElement = (Element) parentsList.item(j);
                     String parentName = parentElement.getTextContent();
                     Variable parentVariable = variablesLookup.get(parentName);
                     if (parentVariable != null) {
-                        factor.addParent(parentVariable);
+                        CPT.addParent(parentVariable);
                     }
                 }
                 String probabilityTable = extractText(cptElement, "TABLE");
                 List<Double> probabilities = parseTable(probabilityTable);
-                factor.setProbabilities(probabilities);
-                factors.add(factor);
+                CPT.setProbabilities(probabilities);
+                CPTS.add(CPT);
             }
         }
     }
@@ -173,13 +173,13 @@ public class Extractor {
     }
 
     //getters
-    public List<Factor> getFactors() {
-        return factors;
+    public List<CPT> getFactors() {
+        return CPTS;
     }
 
     public void printFactors() {
-        for (Factor factor : factors) {
-            System.out.println(factor);
+        for (CPT CPT : CPTS) {
+            System.out.println(CPT);
         }
     }
 

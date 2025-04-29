@@ -2,7 +2,7 @@ import java.util.List;
 
 public class SomethingElse extends BayesianAlgorithm {
     @Override
-    public double calculateProbability(Query query, List<Factor> factors) {
+    public double calculateProbability(Query query, List<CPT> CPTS) {
         // Implement the logic for the new algorithm here
         // This is a placeholder implementation
         return 0.0;
