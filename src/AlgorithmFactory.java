@@ -1,4 +1,5 @@
 //a factory class to create different types of Bayesian algorithms by the type of algorithm.
+//this is clear design and simple to use.
 public class AlgorithmFactory {
 
     public static BayesianAlgorithm createAlgorithm(int type){
@@ -10,7 +11,7 @@ public class AlgorithmFactory {
                case 2:
                    return new VariableElimination();
                case 3:
-                   return new SomethingElse();
+                   return new VEHeuristic();
                default:
                    throw new IllegalArgumentException("Invalid algorithm type: " + type);
            }

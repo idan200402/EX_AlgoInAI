@@ -1,33 +1,36 @@
+import java.sql.SQLOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class VariableElimination extends BayesianAlgorithm {
 
     @Override
-    public double calculateProbability(Query query, List<CPT> cpts) {
-        additionCount = 1;
+    public void calculateProbability(Query query, List<CPT> cpts) {
+        additionCount = 0;
         multiplicationCount = 0;
-
+        Double extracted = tryExtractProbability(query, cpts);
+        if (extracted != null) {
+            this.probability = extracted;
+            return;
+        }
         // Step 1: Deep copy CPTs
         List<CPT> cptsCopy = deepCopyCPTs(cpts);
 
         // Step 2: Convert all CPTs into Factors
+        Set<String> ancestors = getAncestorsFromCPTs(cptsCopy, query.getQuery().keySet(), query.getEvidence().keySet());
+        System.out.println("Ancestors: " + ancestors);
+        // Step 3: Convert only relevant CPTs into Factors
         List<Factor> factors = new ArrayList<>();
         for (CPT cpt : cptsCopy) {
-            factors.add(convertCPTtoFactor(cpt));
+            if (ancestors.contains(cpt.getVariable().getName())) {
+                factors.add(convertCPTtoFactor(cpt));
+            }
         }
-
-        // Step 3: Prune factors that are not relevant
-        pruneFactors(factors, query.getQuery().keySet(), query.getEvidence().keySet());
-
-
-        // Step 4: Restrict evidence
+        System.out.println("Factors: " + factors);
         restrictEvidence(factors, query.getEvidence());
 
         // Step 5: Identify hidden variables
-        Set<String> allVariables = getAllVariables(factors);
-        Set<String> ancestors = getAncestors(factors, query.getQuery().keySet(), query.getEvidence().keySet());
-
+        pruneFactors(factors, ancestors);
         Set<String> hiddenVariables = new HashSet<>(ancestors);
         hiddenVariables.removeAll(query.getQuery().keySet());
         hiddenVariables.removeAll(query.getEvidence().keySet());
@@ -35,8 +38,7 @@ public class VariableElimination extends BayesianAlgorithm {
         // Step 6: Eliminate hidden variables one by one
         while (!hiddenVariables.isEmpty()) {
             List<String> hiddenList = new ArrayList<>(hiddenVariables);
-            Collections.sort(hiddenList);
-            String hidden = hiddenList.get(0);
+            String hidden = chooseNextToEliminate(hiddenList, factors);
             System.out.println("eliminating hidden variable: " + hidden);
             hiddenVariables.remove(hidden);
 
@@ -62,17 +64,33 @@ public class VariableElimination extends BayesianAlgorithm {
         normalize(finalFactor);
         Map<String, String> fullAssignment = new HashMap<>(query.getQuery());
         fullAssignment.putAll(query.getEvidence());
+        // Combine all known assignments
+        Map<String, String> knownAssignment = new HashMap<>(query.getQuery());
+        knownAssignment.putAll(query.getEvidence());
 
-        Set<String> factorVars  = finalFactor.getVariables().stream()
+// Identify unassigned vars still in final factor
+        Set<String> finalVars = finalFactor.getVariables().stream()
                 .map(Variable::getName)
                 .collect(Collectors.toSet());
-        fullAssignment.entrySet()
-                .removeIf(entry -> !factorVars.contains(entry.getKey()));
-        System.out.println("Final Factor Vars: " + finalFactor.getVariables().stream().map(Variable::getName).toList());
-        System.out.println("Final Assignment: " + fullAssignment);
+        Set<String> unassigned = new HashSet<>(finalVars);
+        unassigned.removeAll(knownAssignment.keySet());
 
-        // Step 9: Return probability for query assignment
-        return finalFactor.getProbability(fullAssignment);
+// If there are no unassigned vars, just return result directly
+        if (unassigned.isEmpty()) {
+            this.probability =  finalFactor.getProbability(knownAssignment);
+        }
+
+// Otherwise, marginalize over them
+        double result = 0.0;
+        List<Map<String, String>> completions = generateAllAssignmentsForVars(finalFactor.getVariables(), unassigned);
+
+        for (Map<String, String> completion : completions) {
+            Map<String, String> full = new HashMap<>(knownAssignment);
+            full.putAll(completion);
+            result += finalFactor.getProbability(full);
+            additionCount++; // each sum step
+        }
+        this.probability = result;
     }
 
     // ----- Helper methods -----
@@ -95,6 +113,16 @@ public class VariableElimination extends BayesianAlgorithm {
         }
         return copied;
     }
+    private List<Map<String, String>> generateAllAssignmentsForVars(List<Variable> allVars, Set<String> targetVarNames) {
+        List<Variable> targetVars = allVars.stream()
+                .filter(v -> targetVarNames.contains(v.getName()))
+                .collect(Collectors.toList());
+
+        List<Map<String, String>> result = new ArrayList<>();
+        generateHelper(targetVars, 0, new HashMap<>(), result);
+        return result;
+    }
+
 
     // Convert a CPT into a Factor
     private Factor convertCPTtoFactor(CPT cpt) {
@@ -125,45 +153,32 @@ public class VariableElimination extends BayesianAlgorithm {
     }
 
     // Prune factors unrelated to query/evidence
-    private void pruneFactors(List<Factor> factors, Set<String> queryVars, Set<String> evidenceVars) {
-        Set<String> ancestors = getAncestors(factors, queryVars, evidenceVars);
+    private void pruneFactors(List<Factor> factors, Set<String> ancestors) {
         factors.removeIf(factor -> !containsAny(factor, ancestors));
     }
+    // NEW method to compute ancestors from full CPTs instead of filtered factors
+    private Set<String> getAncestorsFromCPTs(List<CPT> cpts, Set<String> queryVars, Set<String> evidenceVars) {
+        Set<String> target = new HashSet<>(queryVars);
+        target.addAll(evidenceVars);
+        Set<String> ancestors = new HashSet<>(target);
 
-
-    private boolean containsAny(CPT cpt, Set<String> vars) {
-        if (vars.contains(cpt.getVariable().getName())) return true;
-        for (Variable parent : cpt.getParents()) {
-            if (vars.contains(parent.getName())) return true;
-        }
-        return false;
-    }
-
-    // Find ancestors of query and evidence
-    private Set<String> getAncestors(List<Factor> factors, Set<String> queryVars, Set<String> evidenceVars) {
-        Set<String> targets = new HashSet<>(queryVars);
-        targets.addAll(evidenceVars);
-        Set<String> ancestors = new HashSet<>(targets);
-
-        boolean changed;
-        do {
+        boolean changed = true;
+        while (changed) {
             changed = false;
-            for (Factor factor : factors) {
-                for (Variable v : factor.getVariables()) {
-                    if (targets.contains(v.getName())) {
-                        for (Variable u : factor.getVariables()) {
-                            if (ancestors.add(u.getName())) {
-                                changed = true;
-                            }
+            for (CPT cpt : cpts) {
+                if (ancestors.contains(cpt.getVariable().getName())) {
+                    for (Variable parent : cpt.getParents()) {
+                        if (ancestors.add(parent.getName())) {
+                            changed = true;
                         }
                     }
                 }
             }
-            targets = new HashSet<>(ancestors);
-        } while (changed);
-
+        }
         return ancestors;
     }
+
+
 
 
 
@@ -219,7 +234,7 @@ public class VariableElimination extends BayesianAlgorithm {
     }
 
     // Find all factors mentioning a variable
-    private List<Factor> getFactorsMentioning(String var, List<Factor> factors) {
+    protected List<Factor> getFactorsMentioning(String var, List<Factor> factors) {
         List<Factor> result = new ArrayList<>();
         for (Factor f : factors) {
             for (Variable v : f.getVariables()) {
@@ -234,46 +249,68 @@ public class VariableElimination extends BayesianAlgorithm {
 
     // Join multiple factors into one
     private Factor joinFactors(List<Factor> factors) {
-        List<Factor> working = new ArrayList<>(factors);
+        List<Factor> factorsContainsHidden = new ArrayList<>(factors);
 
-        while (working.size() > 1) {
-            // Find the two smallest factors
-            Factor f1 = null, f2 = null;
-            int minSize = Integer.MAX_VALUE;
-
-            for (int i = 0; i < working.size(); i++) {
-                for (int j = i + 1; j < working.size(); j++) {
-                    int size = estimateJoinSize(working.get(i), working.get(j));
-                    if (size < minSize) {
-                        minSize = size;
-                        f1 = working.get(i);
-                        f2 = working.get(j);
-                    }
+        while (factorsContainsHidden.size() > 1) {
+            //first sort the factors by their size aka the number of entries in the probabilities list.
+            factorsContainsHidden.sort(Comparator.comparingInt(Factor::getSize));
+            int smallestSize = factorsContainsHidden.get(0).getSize();
+            List<Factor> smallestFactors = new ArrayList<>();
+            //adding the least size factors to the list of smallest factors.
+            for (Factor f : factorsContainsHidden) {
+                if (f.getSize() == smallestSize) {
+                    smallestFactors.add(f);
+                } else {
+                    break;
                 }
             }
-
-            // Join the smallest pair
+            //in case there are more than 2 factors with the same size we sort them by their ascii value , in case there are for most
+            // 2 than thats the values.
+            Factor f1 = factorsContainsHidden.get(0);
+            Factor f2 = factorsContainsHidden.get(1);
+            if (smallestFactors.size() > 1) {
+                int minAsciiValue = Integer.MAX_VALUE;
+                //bubble sort the factors by their ascii value.
+                for (int i = 0; i < smallestFactors.size(); i++) {
+                    for (int j = 0; j < smallestFactors.size() - 1; j++) {
+                        if (asciiValue(smallestFactors.get(j)) > asciiValue(smallestFactors.get(j + 1))) {
+                            Factor temp = smallestFactors.get(j);
+                            smallestFactors.set(j, smallestFactors.get(j + 1));
+                            smallestFactors.set(j + 1, temp);
+                        }
+                    }
+                }
+                //getting the first two factors with the least ascii value.
+                f1 = smallestFactors.get(0);
+                f2 = smallestFactors.get(1);
+            }
             Factor joined = joinTwoFactors(f1, f2);
-
-            // Replace them with the joined factor
-            working.remove(f1);
-            working.remove(f2);
-            working.add(joined);
+            factorsContainsHidden.remove(f1);
+            factorsContainsHidden.remove(f2);
+            factorsContainsHidden.add(joined);
         }
+        //the last factor left is the joined factor.
+        return factorsContainsHidden.get(0);
 
-        return working.get(0);
     }
     private int estimateJoinSize(Factor f1, Factor f2) {
-        Set<String> vars = new HashSet<>();
-        for (Variable v : f1.getVariables()) vars.add(v.getName());
-        for (Variable v : f2.getVariables()) vars.add(v.getName());
+        Map<String, Variable> varMap = new HashMap<>();
+
+        for (Variable v : f1.getVariables()) {
+            varMap.put(v.getName(), v);
+        }
+        for (Variable v : f2.getVariables()) {
+            varMap.put(v.getName(), v);
+        }
 
         int total = 1;
-        for (String varName : vars) {
-            total *= 2; // assuming binary outcomes (T, F)
+        for (Variable var : varMap.values()) {
+            total *= var.getOutcomes().size(); // Use actual number of outcomes
         }
+
         return total;
     }
+
 
 
 
@@ -402,5 +439,20 @@ public class VariableElimination extends BayesianAlgorithm {
             generateHelper(vars, idx + 1, current, result);
             current.remove(var.getName());
         }
+    }
+    protected String chooseNextToEliminate(List<String> hiddenVariables, List<Factor> factors) {
+        List<String> sortedHidden = new ArrayList<>(hiddenVariables);
+        Collections.sort(sortedHidden);
+        return sortedHidden.get(0);
+    }
+    //method to calculate the ascii value of the factor to use it as a secondary key in the sorting.
+    private int asciiValue(Factor factor) {
+        int sum = 0;
+        for (Variable v : factor.getVariables()) {
+            for (char c : v.getName().toCharArray()) {
+                sum += c;
+            }
+        }
+        return sum;
     }
 }

@@ -2,9 +2,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-//this class represents a factor in bayesian network. The initial factors after the parse are the CPTs.
+//this class represents the conditional probability table (CPT) of a variable in a Bayesian network.
 public class CPT {
-    //it has the variable name the probabilities and the parents of the variable , they are appearing as Given in the xml file.
+    //it has one variable name it parents if has and the probabilities table that given.
     private final Variable variable;
     private List<Double> probabilities;
     private List<Variable> parents;
@@ -32,17 +32,12 @@ public class CPT {
     public void setProbabilities(List<Double> probabilities) {
         this.probabilities = probabilities;
     }
-    //since not all the factors have parents we need to check if the list is null or not and then initialize it and add the parent.
-
+    //since not all the cpts have parents we need to check if the list is null or not and then initialize it and add the parent.
     public void addParent(Variable parent) {
         if (parents == null) {
             parents = new ArrayList<>();
         }
         parents.add(parent);
-    }
-    //for VE
-    public void setParents(List<Variable> parents) {
-        this.parents = parents;
     }
     //for debugging purposes.
     @Override
@@ -67,70 +62,41 @@ public class CPT {
 
         return sb.toString();
     }
-//integral
-//public double getProbability(Map<String, String> assignment) {
-//    //error handling for debugging purposes.
-//    if(!assignment.containsKey(variable.getName())){
-//        System.out.println("Error: assignment does not contain variable name");
-//        return 0;
-//    }
-//    for(Variable parent : parents) {
-//        if (!assignment.containsKey(parent.getName())) {
-//            System.out.println("Error: assignment does not contain parent name");
-//            return 0;
-//        }
-//    }
-//    int index = 0;
-//    int multiplier = 1;
-//    List<Variable> parentsReverse = new ArrayList<>(parents);
-//    Collections.reverse(parentsReverse);
-//    for (Variable parent : parentsReverse) {
-//        String parentAssignment = assignment.get(parent.getName());
-//        int outcomeIndex = parent.getOutcomes().indexOf(parentAssignment);
-//        index += outcomeIndex * multiplier;
-//        multiplier *= parent.getOutcomesCount();
-//    }
-//    String varAssignment = assignment.get(variable.getName());
-//    int varOutcomeIndex = variable.getOutcomes().indexOf(varAssignment);
-//    if (varOutcomeIndex == -1) {
-//        System.out.println("Error: variable assignment is not valid: "+ variable.getName() + "=" + varAssignment);
-//        return 0;
-//    }
-//    index = index * variable.getOutcomesCount() + varOutcomeIndex;
-//
-//    if (index < 0 || index >= probabilities.size()) {
-//        System.out.println("Error: index out of bounds: " + index);
-//        return 0;
-//    }
-//    return probabilities.get(index);
-//}
+    //the integral part of the class , it calculates the index of the probability table based on the assignment of the variables.
+    //The main variable changes the fastest and the parents changing rate is in reverse order.
+    //this method is mainly used in the algorithm lookup and simple inference algorithms.
     public double getProbability(Map<String, String> assignment) {
+        //first putting all parents by order and then adding the variable to the list.
         List<Variable> allVars = new ArrayList<>(parents);
         allVars.add(variable);
+        //initializing the index and multiplier as the neutral to addition and multiplication.
         int index = 0;
         int multiplier = 1;
-
+        //hovering the list of variables in reverse order (as the logic of the CPT).
         for (int i = allVars.size() - 1; i >= 0; i--) {
             Variable var = allVars.get(i);
-            String assignedValue = assignment.get(var.getName());
-            if (assignedValue == null) {
+            String outcome = assignment.get(var.getName());
+            //adding debugging statements.
+            if (outcome == null) {
                 System.out.println("Missing assignment for variable: " + var.getName());
                 return 0;
             }
-            int valueIndex = var.getOutcomes().indexOf(assignedValue);
-            if (valueIndex == -1) {
+            //getting the position of the outcome in the list of outcomes of this variable.
+            int currIndex = var.getOutcomes().indexOf(outcome);
+            //if the assignment is not valid we return 0.
+            if (currIndex == -1) {
                 System.out.println("Invalid outcome for variable: " + var.getName());
                 return 0;
             }
-            index += valueIndex * multiplier;
+            //updating the index and only then the multiplier by the number of outcomes.
+            index += currIndex * multiplier;
             multiplier *= var.getOutcomesCount();
         }
-
+        //for debug purposes.
         if (index < 0 || index >= probabilities.size()) {
-            System.out.println("Index out of bounds for factor lookup: " + index);
+            System.out.println("Index out of bounds for factor lookup: " + index + " for CPT of size " + probabilities.size());
             return 0;
         }
-
         return probabilities.get(index);
     }
 
