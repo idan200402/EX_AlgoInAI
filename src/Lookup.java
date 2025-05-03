@@ -11,18 +11,24 @@ public class Lookup extends BayesianAlgorithm {
         //allAssignments.putAll(query.getEvidence());
         double probability = 1.0;
         //for each CPT we need to extract the relevant assignments and multiply the probabilities with the getProbability method of the CPT class.
+        boolean isFirst = true;
         for(CPT CPT : CPTS) {
             Map<String,String> relevantAssignments = new HashMap<>();
             relevantAssignments.put(CPT.getVariable().getName() , allAssignments.get(CPT.getVariable().getName()));
             for(Variable parent : CPT.getParents()) {
                 relevantAssignments.put(parent.getName() , allAssignments.get(parent.getName()));
             }
+            if(!isFirst) {
+                this.multiplicationCount++;
+            }
+            else {
+                isFirst = false;
+            }
             probability *= CPT.getProbability(relevantAssignments);
         }
         //we haven't made any additions.
         this.additionCount = 0;
         //we have made n multiplications where n is the number of CPTs - 1.
-        this.multiplicationCount += CPTS.size() - 1;
         this.probability = probability;
     }
 }

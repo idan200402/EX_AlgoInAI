@@ -37,6 +37,7 @@ public class Extractor {
 
     //wraps the parsing of the queries.
     private void parseQueries() {
+        //_for_big_net
         String inputPath = "src/input.txt";
         try {
             BufferedReader reader = new BufferedReader(new FileReader(inputPath));
@@ -221,6 +222,7 @@ public class Extractor {
     }
     //method to read the first line of the input file to get the path to the xml file assuming the format is correct.
     private String getNetPath() {
+        //_for_big_net
         String inputPath = "src/input.txt";
         String res = null;
         try {

@@ -6,21 +6,26 @@ import java.util.List;
 //main class to run the program.
 public class Ex1 {
     public static void main(String[] args) {
+        //calling the extractor class to extract the data from the xml file , default is "src/input.xml".
         Extractor extractor = new Extractor();
         extractor.parseInput();
         List<CPT> CPTs = extractor.getFactors();
         List<Query> queries = extractor.getQueries();
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("src/test.txt"));
-            for (Query query : queries) {
-                System.out.println("Query: " + query);
+            //creating the output file and writing the results to it in the format specified in the ex1 file.
+            BufferedWriter writer = new BufferedWriter(new FileWriter("src/output.txt"));
+            //for each Query (contains the query  , evidence and algorithm type) we create the algorithm object and call the calculateProbability method.
+            for(int i = 0; i < queries.size(); i++) {
+                Query query = queries.get(i);
+                //using factory design pattern to create the algorithm object based on the algorithm type.
                 BayesianAlgorithm algorithmFactory = AlgorithmFactory.createAlgorithm(query.getAlgorithmType());
+                //this method is assigning values to the probability , addition and multiplication attributes.
                 algorithmFactory.calculateProbability(query, CPTs);
-                System.out.println("Probability: " + String.format("%.5f", algorithmFactory.getProbability()));
-                System.out.println("Addition count: " + algorithmFactory.getAdditionCount());
-                System.out.println("Multiplication count: " + algorithmFactory.getMultiplicationCount());
-                System.out.println();
-                writer.write(String.format("%.5f,%d,%d\n", algorithmFactory.getProbability(), algorithmFactory.getAdditionCount(), algorithmFactory.getMultiplicationCount()));
+                writer.write(String.format("%.5f,%d,%d", algorithmFactory.getProbability(), algorithmFactory.getAdditionCount(), algorithmFactory.getMultiplicationCount()));
+                //for the last query we don't need to add a new line.
+                if(i<queries.size()-1){
+                    writer.write("\n");
+                }
             }
             writer.close();
         }catch (IOException e) {
