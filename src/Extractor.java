@@ -38,7 +38,7 @@ public class Extractor {
     //wraps the parsing of the queries.
     private void parseQueries() {
         //_for_big_net
-        String inputPath = "src/input.txt";
+        String inputPath = "input.txt";
         try {
             BufferedReader reader = new BufferedReader(new FileReader(inputPath));
             reader.readLine();
@@ -50,7 +50,7 @@ public class Extractor {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Error: couldnt parse the queries from the input file " + e.getMessage());
+            throw new RuntimeException("Error: couldn't parse the queries from the input file " + e.getMessage());
         }
     }
 
@@ -223,7 +223,7 @@ public class Extractor {
     //method to read the first line of the input file to get the path to the xml file assuming the format is correct.
     private String getNetPath() {
         //_for_big_net
-        String inputPath = "src/input.txt";
+        String inputPath = "input.txt";
         String res = null;
         try {
             BufferedReader reader = new BufferedReader(new FileReader(inputPath));
@@ -231,7 +231,7 @@ public class Extractor {
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
         }
-        return "src/" + res;
+        return res;
     }
 
     public List<Query> getQueries() {

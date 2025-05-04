@@ -13,7 +13,7 @@ public class Ex1 {
         List<Query> queries = extractor.getQueries();
         try {
             //creating the output file and writing the results to it in the format specified in the ex1 file.
-            BufferedWriter writer = new BufferedWriter(new FileWriter("src/output.txt"));
+            BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"));
             //for each Query (contains the query  , evidence and algorithm type) we create the algorithm object and call the calculateProbability method.
             for(int i = 0; i < queries.size(); i++) {
                 Query query = queries.get(i);
