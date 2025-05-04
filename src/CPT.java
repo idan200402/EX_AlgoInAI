@@ -4,7 +4,7 @@ import java.util.Map;
 
 //this class represents the conditional probability table (CPT) of a variable in a Bayesian network.
 public class CPT {
-    //it has one variable name it parents if has and the probabilities table that given.
+    //it has one variable name it parents if it has and the probabilities table that given.
     private final Variable variable;
     private List<Double> probabilities;
     private List<Variable> parents;

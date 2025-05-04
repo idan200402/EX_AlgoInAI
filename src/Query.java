@@ -51,7 +51,7 @@ public class Query {
     private String assaignmentToString(Map<String, String> assignments) {
         StringBuilder sb = new StringBuilder();
         for(Map.Entry<String, String> entry : assignments.entrySet()) {
-            if(!sb.isEmpty()) {
+            if(sb.length() > 0) {
                 sb.append(", ");
             }
             sb.append(entry.getKey()).append("=").append(entry.getValue());
