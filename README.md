@@ -19,10 +19,9 @@ This project implements several algorithms for probabilistic inference on Bayesi
 
 git clone https://github.com/idan200402/EX_AlgoInAI.git
 cd EX_AlgoInAI
-### 2. Open the the terminal and locate the project folder
-then type 
+### 2. Open the the terminal and locate the projects src folder for example:
 ```bash
-cd src
+cd C:/folder1/folder2/EX_AlgoInAI/src
 ```
 ### 3. Compile the Java files
 
