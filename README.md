@@ -1,4 +1,4 @@
-# EX_AlgoInAI - Bayesian Network Inference
+#  Bayesian Network Inference
 
 This project implements several algorithms for probabilistic inference on Bayesian networks, including:
 - Lookup
