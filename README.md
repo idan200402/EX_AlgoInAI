@@ -21,7 +21,7 @@ git clone https://github.com/idan200402/EX_AlgoInAI.git
 cd EX_AlgoInAI
 ### 2. Open the the terminal and locate the projects src folder for example:
 ```bash
-cd C:/folder1/folder2/EX_AlgoInAI/src
+cd C:/folder1/folder2/bayesian_nets/src
 ```
 ### 3. Compile the Java files
 
